@@ -1,0 +1,86 @@
+name: Publish health-check images to ECR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'Dockerfile.api'
+      - 'Dockerfile.frontend'
+      - '.github/workflows/ecr-publish.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+
+jobs:
+  publish-to-ecr:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: ./Dockerfile.api
+            repository: ${{ vars.ECR_API_REPOSITORY || 'health-check-api' }}
+          - name: frontend
+            dockerfile: ./Dockerfile.frontend
+            repository: ${{ vars.ECR_FRONTEND_REPOSITORY || 'health-check-frontend' }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure ECR repository exists
+        env:
+          REPOSITORY: ${{ matrix.repository }}
+        shell: bash
+        run: |
+          if ! aws ecr describe-repositories --repository-names "$REPOSITORY" >/dev/null 2>&1; then
+            aws ecr create-repository --repository-name "$REPOSITORY" >/dev/null
+          fi
+
+      - name: Derive image tags
+        id: image-tags
+        shell: bash
+        run: |
+          echo "sha_tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "branch_tag=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push ${{ matrix.repository }}
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SHA_TAG: ${{ steps.image-tags.outputs.sha_tag }}
+          BRANCH_TAG: ${{ steps.image-tags.outputs.branch_tag }}
+        shell: bash
+        run: |
+          docker build -f "${{ matrix.dockerfile }}" \
+            --pull \
+            -t "${ECR_REGISTRY}/${{ matrix.repository }}:${SHA_TAG}" \
+            -t "${ECR_REGISTRY}/${{ matrix.repository }}:${BRANCH_TAG}" \
+            -t "${ECR_REGISTRY}/${{ matrix.repository }}:latest" \
+            .
+
+          docker push "${ECR_REGISTRY}/${{ matrix.repository }}:${SHA_TAG}"
+          docker push "${ECR_REGISTRY}/${{ matrix.repository }}:${BRANCH_TAG}"
+          docker push "${ECR_REGISTRY}/${{ matrix.repository }}:latest"
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "Published ${{ matrix.repository }} to ECR using tags ${GITHUB_SHA::12}, ${GITHUB_REF_NAME//\//-}, and latest."

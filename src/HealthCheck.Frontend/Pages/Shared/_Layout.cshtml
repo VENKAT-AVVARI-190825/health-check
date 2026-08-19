@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/govuk-frontend@5.4.1/dist/govuk/govuk-frontend.min.css" />
+</head>
+<body class="govuk-template__body">
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper" id="main-content">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/govuk-frontend@5.4.1/dist/govuk/govuk-frontend.min.js"></script>
+    <script>window.GOVUKFrontend.initAll();</script>
+</body>
+</html>

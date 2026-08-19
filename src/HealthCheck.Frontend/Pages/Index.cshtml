@@ -1,0 +1,74 @@
+﻿@page
+@model HealthCheck.Frontend.Pages.IndexModel
+@{
+    ViewData["Title"] = "Frontend and backend health check";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/govuk-frontend@5.4.1/dist/govuk/govuk-frontend.min.css" />
+</head>
+<body class="govuk-template__body">
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper" id="main-content">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <span class="govuk-caption-l">Connectivity status</span>
+                    <h1 class="govuk-heading-xl">Frontend to backend health check</h1>
+                    <p class="govuk-body-l">This page verifies that the presentation layer can call the API layer in the deployed environment.</p>
+
+                    @if (Model.ApiHealth is null)
+                    {
+                        <div class="govuk-warning-text" role="alert">
+                            <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                            <strong class="govuk-warning-text__text">
+                                <span class="govuk-warning-text__assistive">Warning</span>
+                                The backend health endpoint is currently unavailable.
+                            </strong>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                        {
+                            <p class="govuk-body">@Model.ErrorMessage</p>
+                        }
+                    }
+                    else
+                    {
+                        <div class="govuk-panel govuk-panel--confirmation">
+                            <h2 class="govuk-panel__title">
+                                @Model.ApiHealth.Status
+                            </h2>
+                            <div class="govuk-panel__body">
+                                Backend service: @Model.ApiHealth.Service<br />
+                                Environment: @Model.ApiHealth.Environment<br />
+                                Version: @Model.ApiHealth.Version
+                            </div>
+                        </div>
+                    }
+
+                    <dl class="govuk-summary-list">
+                        <div class="govuk-summary-list__row">
+                            <dt class="govuk-summary-list__key">Frontend URL</dt>
+                            <dd class="govuk-summary-list__value">@Model.Request.Scheme://@Model.Request.Host</dd>
+                        </div>
+                        <div class="govuk-summary-list__row">
+                            <dt class="govuk-summary-list__key">API base URL</dt>
+                            <dd class="govuk-summary-list__value">@Model.ApiBaseUrl</dd>
+                        </div>
+                        <div class="govuk-summary-list__row">
+                            <dt class="govuk-summary-list__key">Last checked</dt>
+                            <dd class="govuk-summary-list__value">@(Model.ApiHealth is null ? "Not available" : Model.ApiHealth.Timestamp.ToString("yyyy-MM-dd HH:mm:ss 'UTC'"))</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/govuk-frontend@5.4.1/dist/govuk/govuk-frontend.min.js"></script>
+    <script>window.GOVUKFrontend.initAll();</script>
+</body>
+</html>
